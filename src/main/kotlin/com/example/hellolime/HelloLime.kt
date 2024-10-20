@@ -19,7 +19,7 @@ class HelloLime(form: Form?) : AndroidNonvisibleComponent(form) {
 
   @SimpleFunction
   fun HelloWorld() {
-    println("Hello, World!")
+    Meowd()
   }
 
   @SimpleEvent

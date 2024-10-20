@@ -108,7 +108,7 @@ tasks.register("makeSkeleton") {
   val simpleComponents = layout.buildDirectory.file("generated/source/kapt/main/simple_components.json").get().asFile
   val simpleComponentsBuildInfo =
     layout.buildDirectory.file("generated/source/kapt/main/simple_components_build_info.json").get().asFile
-  val skeletonDirectory = layout.buildDirectory.file("extension/skeleton/").get().asFile
+  val skeletonDirectory = layout.buildDirectory.file("extension/").get().asFile
 
   // Note:
   //  We use a modified version of Annotation Processor
@@ -133,17 +133,17 @@ tasks.register("makeSkeleton") {
 tasks.register("copyToSkeleton") {
   doLast {
     layout.buildDirectory.file("extension/build/AndroidRuntime.jar")
-      .get().asFile.copyTo(layout.buildDirectory.file("extension/skeleton/files/AndroidRuntime.jar").get().asFile)
+      .get().asFile.copyTo(layout.buildDirectory.file("extension/${project.group}/files/AndroidRuntime.jar").get().asFile)
 
     layout.buildDirectory.file("extension/build/classes.jar")
-      .get().asFile.copyTo(layout.buildDirectory.file("extension/skeleton/classes.jar").get().asFile)
+      .get().asFile.copyTo(layout.buildDirectory.file("extension/${project.group}/classes.jar").get().asFile)
   }
 }
 
 tasks.register<Zip>("zipExtension") {
   dependsOn("copyToSkeleton")
 
-  val toZip = layout.buildDirectory.files("extension/skeleton/")
+  val toZip = layout.buildDirectory.files("extension/${project.group}/")
   from(toZip)
   archiveFileName.set(project.group.toString() + ".aix") // package name + aix
   destinationDirectory.set(rootProject.file("out/"))
