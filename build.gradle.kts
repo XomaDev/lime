@@ -144,7 +144,9 @@ tasks.register<Zip>("zipExtension") {
   dependsOn("copyToSkeleton")
 
   val toZip = layout.buildDirectory.files("extension/${project.group}/")
-  from(toZip)
+  from(toZip) {
+    into(project.group.toString())
+  }
   archiveFileName.set(project.group.toString() + ".aix") // package name + aix
   destinationDirectory.set(rootProject.file("out/"))
 }
