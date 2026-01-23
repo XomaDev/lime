@@ -19,12 +19,13 @@ dependencies {
   compileOnly(rootProject.fileTree("lib/appinventor") {
     include("*.jar")
   })
+  implementation(rootProject.fileTree("lib/deps") { include("*.jar") })
 
   kapt(files("lib/appinventor/AnnotationProcessors.jar"))
 }
 
 val javaHome: String = System.getenv("JAVA_HOME") ?: System.getProperty("java.home")
-val myJava: String = javaHome + "bin/java"
+val myJava: String = javaHome + "/bin/java"
 
 tasks.register("extension") {
   val buildDir = layout.buildDirectory.asFile.get()
