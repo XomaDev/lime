@@ -4,7 +4,7 @@ plugins {
   kotlin("kapt") version "2.0.21"
 }
 
-group = "com.example.hellolime"
+group = "me.ekita.hellolime"
 version = "1.0-SNAPSHOT"
 
 repositories {
@@ -50,56 +50,76 @@ tasks.register<Jar>("buildSource") {
   destinationDirectory.set(file(layout.buildDirectory.file("extension/build/")))
   duplicatesStrategy = DuplicatesStrategy.WARN
 
-  finalizedBy("proguardJar")
+  finalizedBy("r8Jar")
 }
-
-tasks.register("proguardJar") {
-  // kotlin libraries are fat, we need to make em thin
-  val proguardJar = rootProject.file("lib/build-tools/proguard.jar")
+tasks.register("r8Jar") {
+  val r8Jar = rootProject.file("lib/build-tools/d8.jar")
   val proguardRules = rootProject.file("proguard-rules.pro")
   val inputJar = layout.buildDirectory.file("extension/build/AndroidRuntimeUnoptimized.jar").get().asFile
   val outputJar = layout.buildDirectory.file("extension/build/AndroidRuntime.jar").get().asFile
 
-  doLast {
-    exec {
-      commandLine(
-        myJava,
-        "-jar",
-        proguardJar.absolutePath,
-        "-injars",
-        inputJar.absolutePath,
-        "-outjars",
-        outputJar,
-        "-libraryjars",
-        "$javaHome/jmods/java.base.jmod",
-        "-include",
-        proguardRules.absolutePath
-      )
-    }
-  }
-
-  finalizedBy("d8Jar")
-}
-
-tasks.register("d8Jar") {
-  val d8Jar = rootProject.file("lib/build-tools/d8.jar")
-
-  val inputJar = layout.buildDirectory.file("extension/build/AndroidRuntime.jar").get()
-  val outputJar = layout.buildDirectory.file("extension/build/classes.jar").get()
+  val androidJar = rootProject.file("lib/appinventor/android.jar")
 
   doLast {
+    // First: R8 with --classfile to produce optimized Java bytecode
     exec {
       commandLine(
         myJava,
         "-cp",
-        d8Jar.absolutePath,
-        "com.android.tools.r8.D8",
+        r8Jar.absolutePath,
+        "com.android.tools.r8.R8",
+        "--classfile",
+        "--release",
         "--output",
-        outputJar,
-        inputJar
+        outputJar.absolutePath,
+        "--pg-conf",
+        proguardRules.absolutePath,
+        "--lib",
+        androidJar,
+        inputJar.absolutePath
       )
     }
   }
+
+  finalizedBy("r8Dex")
+}
+
+tasks.register("r8Dex") {
+  val r8Jar = rootProject.file("lib/build-tools/d8.jar")
+  val proguardRules = rootProject.file("proguard-rules.pro")
+  val inputJar = layout.buildDirectory.file("extension/build/AndroidRuntimeUnoptimized.jar").get().asFile
+  val outputDir = layout.buildDirectory.file("extension/build/").get().asFile
+
+  val androidJar = rootProject.file("lib/appinventor/android.jar")
+
+  doLast {
+    // Second: R8 without --classfile to produce DEX
+    exec {
+      commandLine(
+        myJava,
+        "-cp",
+        r8Jar.absolutePath,
+        "com.android.tools.r8.R8",
+        "--release",
+        "--output",
+        outputDir.absolutePath,
+        "--pg-conf",
+        proguardRules.absolutePath,
+        "--lib",
+        androidJar,
+        inputJar.absolutePath
+      )
+    }
+
+    // Wrap classes.dex in classes.jar
+    val jarFile = layout.buildDirectory.file("extension/build/classes.jar").get().asFile
+    ant.invokeMethod("zip", mapOf(
+      "destfile" to jarFile.absolutePath,
+      "basedir" to outputDir.absolutePath,
+      "includes" to "classes.dex"
+    ))
+  }
+
   finalizedBy("makeSkeleton")
 }
 
@@ -111,8 +131,6 @@ tasks.register("makeSkeleton") {
     layout.buildDirectory.file("generated/source/kapt/main/simple_components_build_info.json").get().asFile
   val skeletonDirectory = layout.buildDirectory.file("extension/").get().asFile
 
-  // Note:
-  //  We use a modified version of Annotation Processor
   doLast {
     exec {
       commandLine(
@@ -123,6 +141,9 @@ tasks.register("makeSkeleton") {
         simpleComponents,
         simpleComponentsBuildInfo,
         skeletonDirectory,
+        "false",
+        "false",
+        "false",
         "false"
       )
     }

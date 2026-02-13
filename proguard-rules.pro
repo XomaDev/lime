@@ -1,5 +1,5 @@
--keep class com.example.hellolime.** { *; }
+-keep class me.ekita.hellolime.** { *; }
 -keepattributes Signature,InnerClasses,EnclosingMethod
 -dontwarn **
 
--repackageclasses 'com.example.hellolime.repackaged'
+-repackageclasses 'me.ekita.hellolime.repackaged'
